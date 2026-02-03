@@ -1,0 +1,6 @@
+streamlit
+shioaji
+pandas
+plotly
+requests
+schedule
