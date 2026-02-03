@@ -1,29 +1,66 @@
 import streamlit as st
+import shioaji as sj
+import pandas as pd
+import datetime
 
-st.title("🕵️‍♀️ 金庫偵測模式")
+# ==========================================
+# 1. 頁面基礎設定
+# ==========================================
+st.set_page_config(page_title="V4 財富分配中控台", page_icon="💎", layout="centered")
+st.title("💎 V4 財富分配中控台")
+st.caption("專注於極端行情的財富重分配機會")
 
-# 1. 檢查 Secrets 是否存在
-if not st.secrets:
-    st.error("❌ 嚴重錯誤：App 完全讀不到任何 Secrets！")
-    st.info("可能原因：Streamlit Cloud 後台的 Secrets 欄位是空的，或是沒有按 Save。")
-    st.stop()
+# ==========================================
+# 2. 連線設定 (讀取 Secrets)
+# ==========================================
+@st.cache_resource
+def init_shioaji():
+    # 使用模擬環境 (simulation=True)
+    api = sj.Shioaji(simulation=True)
+    try:
+        # 從雲端金庫讀取帳密
+        api.login(
+            api_key=st.secrets["shioaji"]["api_key"], 
+            secret_key=st.secrets["shioaji"]["secret_key"]
+        )
+        return api, "✅ 系統連線成功"
+    except Exception as e:
+        return None, f"❌ 連線失敗: {str(e)}"
 
-# 2. 檢查有哪些「分類」 (Top-level keys)
-# 我們只印出 Key，不印出密碼，確保安全
-keys = list(st.secrets.keys())
-st.write(f"目前讀取到的分類 Keys: {keys}")
+api, status_msg = init_shioaji()
 
-# 3. 專門檢查 shioaji
-if "shioaji" in st.secrets:
-    st.success("✅ 成功找到 [shioaji] 分類！")
-    # 再深入檢查裡面的 api_key
-    if "api_key" in st.secrets["shioaji"]:
-        st.success("✅ 成功找到 api_key！")
-        # 顯示前兩碼確認不是空的 (例如 "P9***")
-        key_val = st.secrets["shioaji"]["api_key"]
-        st.info(f"Key 的前兩碼為: {key_val[:2]}***")
-    else:
-        st.error("❌ 找到 shioaji 分類，但裡面沒有 api_key！")
+# 顯示連線狀態
+if api:
+    st.success(status_msg)
 else:
-    st.error("❌ 找不到 [shioaji] 分類！")
-    st.warning("請檢查 Secrets 設定，第一行必須是 [shioaji]")
+    st.error(status_msg)
+    st.warning("請檢查 Secrets 設定是否正確")
+    st.stop() # 連線失敗則停止執行
+
+st.divider()
+
+# ==========================================
+# 3. 策略邏輯核心 (V4 Brain)
+# ==========================================
+def check_v4_signal(open_price, high_price, low_price, close_price, vol, avg_vol):
+    """
+    輸入數據，判斷是否符合 V4 財富分配訊號
+    """
+    signals = []
+    
+    # 計算關鍵指標
+    # 漲跌幅 %
+    day_ret_pct = (close_price - open_price) / open_price * 100
+    # 量能比 (預估量 / 均量)
+    vol_ratio = vol / avg_vol if avg_vol > 0 else 0
+    # 上影線長度
+    upper_shadow = high_price - close_price
+    # 實體長度
+    body_len = abs(close_price - open_price)
+    
+    # --- 策略 A: 🩸 絕地求生 (Panic Climax) ---
+    # 條件: 跌幅 > 1.5% 且 爆量 > 1.5倍
+    if day_ret_pct < -1.5 and vol_ratio > 1.5:
+        signals.append({
+            "name": "🩸 絕地求生 (Panic Climax)",
+            "desc": f"跌幅 {day_ret_pct:.2f}% | 量能 {vol_ratio
