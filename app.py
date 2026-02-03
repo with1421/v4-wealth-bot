@@ -63,4 +63,25 @@ def check_v4_signal(open_price, high_price, low_price, close_price, vol, avg_vol
     if day_ret_pct < -1.5 and vol_ratio > 1.5:
         signals.append({
             "name": "🩸 絕地求生 (Panic Climax)",
-            "desc": f"跌幅 {day_ret_pct:.2f}% | 量能 {vol_ratio
+            "desc": f"跌幅 {day_ret_pct:.2f}% | 量能 {vol_ratio:.1f}倍 | 恐慌極致，準備反彈",
+            "action": "建議：尾盤進場做多 (留倉)",
+            "type": "danger" # 紅色警示
+        })
+
+    # --- 策略 B: 🐉 飛龍在天 (Momentum) ---
+    # 條件: 漲幅 > 1.5% 且 光頭紅棒 (上影線 < 實體20%)
+    # 避免除以0錯誤
+    if body_len > 0:
+        shadow_ratio = upper_shadow / body_len
+    else:
+        shadow_ratio = 1.0
+
+    if day_ret_pct > 1.5 and shadow_ratio < 0.2:
+        signals.append({
+            "name": "🐉 飛龍在天 (Strongest Momentum)",
+            "desc": f"漲幅 {day_ret_pct:.2f}% | 收最高 (影線{shadow_ratio:.2f}) | 動能強勁",
+            "action": "建議：尾盤追價做多 (留倉)",
+            "type": "danger" # 紅色警示
+        })
+        
+    return signals
